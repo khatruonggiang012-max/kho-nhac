@@ -1,0 +1,42 @@
+name: Auto generate songs.json
+
+on:
+  push:
+    paths:
+      - 'songs/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate songs.json
+        run: |
+          echo "[" > songs.json
+          i=1
+          for file in songs/*.mp3; do
+            filename=$(basename "$file")
+            title="${filename%.mp3}"
+            echo "  {" >> songs.json
+            echo "    \"id\": \"$i\"," >> songs.json
+            echo "    \"title\": \"$title\"," >> songs.json
+            echo "    \"file\": \"$filename\"" >> songs.json
+            if [ $i -lt $(ls songs/*.mp3 | wc -l) ]; then
+              echo "  }," >> songs.json
+            else
+              echo "  }" >> songs.json
+            fi
+            i=$((i+1))
+          done
+          echo "]" >> songs.json
+
+      - name: Commit songs.json
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add songs.json
+          git commit -m "Auto update songs.json" || echo "No changes"
+          git push
